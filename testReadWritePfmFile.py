@@ -7,7 +7,7 @@ from showImageTools import showImage, waitMoment
 def main():
 	fpath="./test/0008_2.pfm"
 	img1 = readPfm1(fpath)
-	print("------------- ", img1[214,872])
+	print("--------------- ", img1[214,872])
 	showImg = img1.astype(np.uint8);
 
 	showImage(fpath, showImg)
