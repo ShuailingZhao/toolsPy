@@ -6,13 +6,13 @@ from showImageTools import showImage, waitMoment
 
 def main():
 	fpath="./test/0008_2.pfm"
-	img1 = readPfm1(fpath)
+	img1 = readPfm(fpath)
 	print("----------------- ", img1[214,872])
 	showImg = img1.astype(np.uint8);
 
 	showImage(fpath, showImg)
 	waitMoment(3000)
-	writePfm3(img1, '0008_2.pfm')
+	writePfm(img1, '0008_2.pfm')
 
 
 
