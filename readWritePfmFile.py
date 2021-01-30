@@ -7,24 +7,24 @@ def writeDataWithBytes(fpath, file_identifier, width, height, scale, values):
 	with open(fpath, 'wb') as f:
 		f.write((file_identifier+'\n').encode())
 		f.write(b'%d %d\n' % (width, height))
-		f.write(b'%d\n' % scale)
+		f.write(b'%f\n' % scale)
 		f.write(values)
 
 def writeDataWithStr(fpath, file_identifier, width, height, scale, values):
 	with open(fpath, 'wb') as f:
 		f.write(file_identifier+'\n')
 		f.write('%d %d\n' % (width, height))
-		f.write('%d\n' % scale)
+		f.write('%f\n' % scale)
 		f.write(values)	
 
-def writePfm(data, fpath, scale=1, file_identifier="Pf", dtype="float32"):
+def writePfm(data, fpath, scale=1.0, file_identifier="Pf", dtype="float32"):
 	data = np.flipud(data)
 	height, width = np.shape(data)[:2]
 	values = np.ndarray.flatten(np.asarray(data, dtype=dtype))
 	endianness = data.dtype.byteorder
 
 	if endianness == '<' or (endianness == '=' and sys.byteorder == 'little'):
-		scale *= -1
+		scale *= -1.0
 	
 	if len(data.shape) == 3 and data.shape[2] == 3: # color image
 		color = True
@@ -47,7 +47,6 @@ def readPfm(fpath, expected_identifier="Pf"):
 	with open(fpath, 'rb') as f:
 		#  header
 		identifier = _get_next_line(f)
-		
 		if identifier == expected_identifier:
 			color = False
 		elif identifier == 'PF':
@@ -80,8 +79,8 @@ def readPfm(fpath, expected_identifier="Pf"):
 #			shape = (height, width, 3)
 			data = np.reshape(data, shape)
 			data = np.flipud(data)
-			with np.errstate(invalid="ignore"):
-				data *= abs(scale)
+#			with np.errstate(invalid="ignore"):
+#				data *= abs(scale)
 		except:
 			raise Exception('Invalid binary values. Could not create %dx%d array from input.' % (height, width))
 
@@ -94,7 +93,6 @@ def _get_next_line(f):
 	else:
 		next_line = f.readline().rstrip()
 	# ignore comments
-				
 	while next_line.startswith('#'):
 		next_line = f.readline().rstrip()
 		
@@ -117,7 +115,7 @@ def readPfm1(fileName):
 
 	header = f.readline().rstrip()
 	if header.decode('ascii') == 'PF':
-		color = True    
+		color = True
 	elif header.decode('ascii') == 'Pf':
 		color = False
 	else:
@@ -138,13 +136,17 @@ def readPfm1(fileName):
 
 	data = np.fromfile(f, endian + 'f')
 	shape = (height, width, 3) if color else (height, width)
-	return np.reshape(data, shape), scale
+#	return np.reshape(data, shape), scale
+	data = np.reshape(data, shape)
+	data = np.flipud(data)
+	return data
 
 '''
 Write a Numpy array to a PFM file.
 '''
-def writePfm1(fileName, image, scale = 1):
+def writePfm1(image, fileName, scale = 1.0):
 	f = open(fileName, 'wb')
+	image = np.flipud(image)
 
 	color = None
 
@@ -184,10 +186,11 @@ def readPfm3(filename, verbose=False):
 		parsed = parse(buf, verbose)
 		if parsed is not None:
 			pixels, scale = parsed
-			return pixels, scale
+#			return pixels, scale
+			return pixels
 		raise RuntimeError("File %s is not a valid PFM file."%(filename))
 
-def writePfm3(filename, pixels, scale=1.0, little_endian=True, verbose=False):
+def writePfm3(pixels, filename, scale=1.0, verbose=False):
 	"""
 	Writes the contents of the given float32 ndarray into a 1- or 3-channel
 	PFM file by the given name. Both little-endian and big-endian files are
@@ -197,6 +200,9 @@ def writePfm3(filename, pixels, scale=1.0, little_endian=True, verbose=False):
 	with open(filename, 'wb') as f:
 		if verbose:
 			print("Writing file %s "%(filename), end='')
+		endianness = pixels.dtype.byteorder
+		if endianness == '<' or (endianness == '=' and sys.byteorder == 'little'):
+			little_endian=True
 		pfm_bytearray = generate(pixels, scale, little_endian, verbose)
 		f.write(pfm_bytearray)
 
@@ -221,6 +227,7 @@ def parse(pfm_bytearray, verbose=False):
 		f32 = np.frombuffer(pfm_bytearray, dtype=dtype, count=width * height * numchannels, offset=len(header))
 		f32 = f32.reshape((height, width) if numchannels == 1 else (height, width, 3))
 		f32 = f32.astype(np.float32)  # pylint: disable=no-member
+		f32 = np.flipud(f32)
 		return f32, scale
 	return None
 
@@ -233,6 +240,7 @@ def generate(pixels, scale=1.0, little_endian=True, verbose=False):
 	either (h, w), representing grayscale data, or (h, w, c), where c is either
 	1 or 3, for grayscale and color data, respectively.
 	"""
+	pixels = np.flipud(pixels)
 	assert pixels.ndim in [2, 3], "pixel array must not have ndim == %d"%(pixels.ndim)
 	assert pixels.ndim == 2 or pixels.shape[2] in [1, 3]
 	numchannels = 1 if pixels.ndim == 2 else pixels.shape[2]
@@ -248,8 +256,8 @@ def generate(pixels, scale=1.0, little_endian=True, verbose=False):
 		byteorder = ">"
 		scale = scale
 		f32bs = f32.byteswap()
-	if verbose:
-		print("(w=%d, h=%d, c=%d, scale=%.3f, byteorder='%s')"%(width, height, numchannels, abs(scale), byteorder))
-	pfm_bytearray = bytearray("%s %d %d %.3f\n"%(typestr, width, height, scale), 'utf-8')
+#	if verbose:
+#		print("(w=%d, h=%d, c=%d, scale=%.3f, byteorder='%s')"%(width, height, numchannels, abs(scale), byteorder))
+	pfm_bytearray = bytearray("%s\n%d %d\n%.3f\n"%(typestr, width, height, scale), 'utf-8')
 	pfm_bytearray.extend(f32bs.flatten())
 	return bytes(pfm_bytearray)
