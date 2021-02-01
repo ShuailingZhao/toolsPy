@@ -17,3 +17,15 @@ def writeCSV(data, fileName='./traWeightLoss.csv'):
 		writer = csv.writer(output, lineterminator='\n')
 		for val in data:
 			writer.writerow(val)
+			
+class txtLoader:
+	def __init__(self, dataPath):
+		self.f = open(dataPath,"r")
+
+	def nextRow(self):
+		oneLine = self.f.readline().strip('\n')
+		data = oneLine.split(',')
+		return data
+	
+	def close(self):
+		self.f.close()
